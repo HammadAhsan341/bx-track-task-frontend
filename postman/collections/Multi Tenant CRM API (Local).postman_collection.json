@@ -1,0 +1,859 @@
+{
+  "info": {
+    "_postman_id": "155502f8-4319-4fbc-a0c5-f3b349d517bf",
+    "name": "Multi Tenant CRM API (Local)",
+    "description": "Ready-to-import collection for the NestJS CRM server.\n\nHow to use:\n1. Start API locally (default: http://localhost:4000).\n2. Run `npm run seed` and copy an admin `x-user-id` from seed output.\n3. In collection variables, set `x_user_id` to that admin ID.\n4. Run requests in order: Health -> Users -> Customers -> Notes -> Activity Logs.\n\nThis collection auto-saves useful IDs to collection variables:\n- `admin_user_id`\n- `member_user_id`\n- `created_user_id`\n- `customer_id`\n- `next_cursor`\n- `note_id`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const data = pm.response.json();",
+                  "pm.test('Health is ok', function () {",
+                  "  pm.expect(data.status).to.eql('ok');",
+                  "});"
+                ],
+                "id": "ee5e2f6d-6fbc-4ac8-a49b-efd9546877f6"
+              }
+            }
+          ],
+          "id": "03fea460-785d-4b59-a756-bd78f1e60c95",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Public health endpoint. No auth header required."
+          },
+          "response": []
+        }
+      ],
+      "id": "13a30340-a707-4b53-8fbf-19ad1a2bd099"
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const data = pm.response.json();",
+                  "if (data && data.id) {",
+                  "  pm.collectionVariables.set('admin_user_id', data.id);",
+                  "}",
+                  "",
+                  "pm.test('User object exists', function () {",
+                  "  pm.expect(data).to.have.property('id');",
+                  "  pm.expect(data).to.have.property('organizationId');",
+                  "});"
+                ],
+                "id": "386ad2bc-0d74-4f57-9a91-275165992544"
+              }
+            }
+          ],
+          "id": "732c2f5d-d57b-4af0-8932-bb7dc95c8ef9",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Verifies your current auth identity from `x-user-id`."
+          },
+          "response": []
+        },
+        {
+          "name": "List Users (Same Organization)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const users = pm.response.json();",
+                  "if (Array.isArray(users)) {",
+                  "  const admin = users.find((u) => u.role === 'admin');",
+                  "  const member = users.find((u) => u.role === 'member');",
+                  "  if (admin && admin.id) pm.collectionVariables.set('admin_user_id', admin.id);",
+                  "  if (member && member.id) pm.collectionVariables.set('member_user_id', member.id);",
+                  "}",
+                  "",
+                  "pm.test('Response is an array', function () {",
+                  "  pm.expect(Array.isArray(users)).to.eql(true);",
+                  "});"
+                ],
+                "id": "a4433d27-2210-4729-ac80-b018e117a94c"
+              }
+            }
+          ],
+          "id": "6e01435d-90c4-48bf-a66c-1b0d2d7158df",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Lists users in the same organization as the acting user."
+          },
+          "response": []
+        },
+        {
+          "name": "Create User (Admin Only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const data = pm.response.json();",
+                  "if (data && data.id) {",
+                  "  pm.collectionVariables.set('created_user_id', data.id);",
+                  "  if (data.role === 'member') {",
+                  "    pm.collectionVariables.set('member_user_id', data.id);",
+                  "  }",
+                  "}",
+                  "",
+                  "pm.test('Created user has id', function () {",
+                  "  pm.expect(data).to.have.property('id');",
+                  "});"
+                ],
+                "id": "f703cc17-9bf6-47c3-9572-b2e3abb6a774"
+              }
+            }
+          ],
+          "id": "5455c3d0-f911-49e8-8fd5-428da52343a8",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Member {{$timestamp}}\",\n  \"email\": \"test.member.{{$timestamp}}@example.com\",\n  \"role\": \"member\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Creates a new user in your organization. Requires admin role."
+          },
+          "response": []
+        }
+      ],
+      "id": "e5ddf4f7-f72b-4e0f-83fa-b9775d905500"
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "Create Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "7c267a4d-c300-4a44-b0eb-5b5d58a0b7ce",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const data = pm.response.json();",
+                  "if (data && data.id) {",
+                  "  pm.collectionVariables.set('customer_id', data.id);",
+                  "}",
+                  "",
+                  "pm.test('Created customer has id', function () {",
+                  "  pm.expect(data).to.have.property('id');",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "id": "b504575f-ab74-4d96-af20-655c92e902d9",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Customer {{$timestamp}}\",\n  \"email\": \"customer.{{$timestamp}}@example.com\",\n  \"phone\": \"+1 555 200 1009\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers"
+              ]
+            },
+            "description": "Creates an active customer in your organization."
+          },
+          "response": []
+        },
+        {
+          "name": "List Customers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const data = pm.response.json();",
+                  "if (data && Array.isArray(data.items) && data.items.length > 0) {",
+                  "  pm.collectionVariables.set('customer_id', data.items[0].id);",
+                  "}",
+                  "",
+                  "if (data && data.nextCursor) {",
+                  "  pm.collectionVariables.set('next_cursor', data.nextCursor);",
+                  "}",
+                  "",
+                  "pm.test('Paginated shape is valid', function () {",
+                  "  pm.expect(data).to.have.property('items');",
+                  "  pm.expect(Array.isArray(data.items)).to.eql(true);",
+                  "});"
+                ],
+                "id": "6dcbb513-7bc4-4311-9866-cc12aad5bc49"
+              }
+            }
+          ],
+          "id": "d4eb4808-7146-4841-b536-b07bfb6c6ac6",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers?limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                }
+              ]
+            },
+            "description": "Lists customers with keyset pagination. Updates `customer_id` and `next_cursor` variables."
+          },
+          "response": []
+        },
+        {
+          "name": "List Customers (Search)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "id": "23c04442-2b1c-40eb-89ab-5ce97e3ee297"
+              }
+            }
+          ],
+          "id": "0b9c7d7a-8fb0-4e94-a18e-5a3927785d3d",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers?limit={{limit}}&search={{search}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                },
+                {
+                  "key": "search",
+                  "value": "{{search}}"
+                }
+              ]
+            },
+            "description": "Search customers by name or email (case-insensitive)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Customer By ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const data = pm.response.json();",
+                  "pm.test('Customer id matches variable', function () {",
+                  "  pm.expect(data.id).to.eql(pm.collectionVariables.get('customer_id'));",
+                  "});"
+                ],
+                "id": "0e433f73-830e-4dfb-82f0-3f43b454810d"
+              }
+            }
+          ],
+          "id": "8e43eb35-33e5-4c52-8147-d3100e996216",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers/{{customer_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "{{customer_id}}"
+              ]
+            },
+            "description": "Fetches a single customer by id."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "id": "32976e2b-8005-4474-a40c-2a1978eebfe3"
+              }
+            }
+          ],
+          "id": "56550210-f76f-4c67-81b5-a751bb2a13b9",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Customer {{$timestamp}}\",\n  \"email\": \"updated.customer.{{$timestamp}}@example.com\",\n  \"phone\": \"+1 555 333 4444\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/{{customer_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "{{customer_id}}"
+              ]
+            },
+            "description": "Updates selected customer fields."
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 or 201', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "id": "186f2eed-844f-44a5-9ead-0391c72b5852"
+              }
+            }
+          ],
+          "id": "020a8f22-7bf3-44af-8cd5-33183d2808b8",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{member_user_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/{{customer_id}}/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "{{customer_id}}",
+                "assign"
+              ]
+            },
+            "description": "Assigns customer to a member user. Requires `member_user_id` variable."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Customer (Soft Delete)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "id": "a2762d25-5fe2-4294-b66c-15ef22da942a"
+              }
+            }
+          ],
+          "id": "5d61d5be-b462-4243-85a5-3c6d023b8548",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers/{{customer_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "{{customer_id}}"
+              ]
+            },
+            "description": "Soft-deletes customer. Customer disappears from normal list/read endpoints."
+          },
+          "response": []
+        },
+        {
+          "name": "Restore Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 or 201', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "id": "42d11339-1122-4895-a395-d5bb1dd7d4b9"
+              }
+            }
+          ],
+          "id": "7f643e1c-8331-497b-b545-37685d969340",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers/{{customer_id}}/restore",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "{{customer_id}}",
+                "restore"
+              ]
+            },
+            "description": "Restores a soft-deleted customer."
+          },
+          "response": []
+        }
+      ],
+      "id": "3359fd0d-50ca-42ce-80b1-a3d7889ae6ed"
+    },
+    {
+      "name": "Notes",
+      "item": [
+        {
+          "name": "List Notes By Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "id": "791f6357-3a85-45ba-b304-b5c417173da0"
+              }
+            }
+          ],
+          "id": "a3cedd72-abdf-4e80-a9f8-d7c15fa7c352",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers/{{customer_id}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "{{customer_id}}",
+                "notes"
+              ]
+            },
+            "description": "Lists all notes for a customer, oldest first."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Note",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const data = pm.response.json();",
+                  "if (data && data.id) {",
+                  "  pm.collectionVariables.set('note_id', data.id);",
+                  "}"
+                ],
+                "id": "ae752b8b-4c67-4961-a79f-0addc5475f73"
+              }
+            }
+          ],
+          "id": "ebc95b7a-e8e9-4360-8e47-57d3e441a280",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Follow-up note created from Postman at {{$isoTimestamp}}.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/{{customer_id}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "{{customer_id}}",
+                "notes"
+              ]
+            },
+            "description": "Creates a note for a customer."
+          },
+          "response": []
+        }
+      ],
+      "id": "4bc1f0c5-1082-4cb3-b7e0-acd6c8f72a6c"
+    },
+    {
+      "name": "Activity Logs",
+      "item": [
+        {
+          "name": "List Activity Logs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const data = pm.response.json();",
+                  "pm.test('Response is an array', function () {",
+                  "  pm.expect(Array.isArray(data)).to.eql(true);",
+                  "});"
+                ],
+                "id": "e80f1370-c86c-4f3d-9063-3d819d8d6731"
+              }
+            }
+          ],
+          "id": "b55863cf-9bc4-4bfa-8a77-ccb4c54480f5",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{x_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/activity-logs?limit={{activity_limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activity-logs"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{activity_limit}}"
+                }
+              ]
+            },
+            "description": "Lists newest activity logs for your organization."
+          },
+          "response": []
+        }
+      ],
+      "id": "dc8eae27-6597-4013-b0af-dba31d138a92"
+    }
+  ],
+  "variable": [
+    {
+      "id": "735b8407-cdcb-4fa3-b07e-35f46d9d0ff4",
+      "key": "baseUrl",
+      "value": "http://localhost:3003"
+    },
+    {
+      "id": "e00979b0-adc1-48dc-9ca4-0eebab8740fb",
+      "key": "x_user_id",
+      "value": ""
+    },
+    {
+      "id": "f753941d-28e1-489f-9a03-b51ed3e6c49d",
+      "key": "admin_user_id",
+      "value": ""
+    },
+    {
+      "id": "fa58e81d-c014-4726-a761-31ee318d6897",
+      "key": "member_user_id",
+      "value": ""
+    },
+    {
+      "id": "67e0af42-b00b-49d5-b8bc-25e2c72071d1",
+      "key": "created_user_id",
+      "value": ""
+    },
+    {
+      "id": "3af33aa2-7280-41e9-869c-9635d6c73aef",
+      "key": "customer_id",
+      "value": ""
+    },
+    {
+      "id": "079ba184-39d8-4932-9cf8-6577790e6cb2",
+      "key": "next_cursor",
+      "value": ""
+    },
+    {
+      "id": "a49616c7-4d82-4f62-94a4-9e2d828640e7",
+      "key": "note_id",
+      "value": ""
+    },
+    {
+      "id": "d1ee1f00-58be-4adc-8bc4-c3f016ddd57f",
+      "key": "limit",
+      "value": "20"
+    },
+    {
+      "id": "eebdb58a-a1c0-4014-8f00-c08432aa7d2a",
+      "key": "search",
+      "value": "customer"
+    },
+    {
+      "id": "4bdb7aa8-f06a-4295-ab0f-5b298a7b8ad1",
+      "key": "activity_limit",
+      "value": "20"
+    }
+  ]
+}
