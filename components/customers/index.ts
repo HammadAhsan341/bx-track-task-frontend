@@ -1,0 +1,10 @@
+export { CreateCustomerForm } from "./create-customer-form";
+export { CustomerTable } from "./customer-table";
+export { CustomerList } from "./customer-list";
+export { CustomerCard } from "./customer-card";
+export { CustomerFilters } from "./customer-filters";
+export { CustomerPagination } from "./customer-pagination";
+export { CustomerStats } from "./customer-stats";
+export { CustomerDashboard } from "./customer-dashboard";
+export { NotesSection } from "./notes-section";
+export { ActivityLogsTable } from "./activity-logs-table";
