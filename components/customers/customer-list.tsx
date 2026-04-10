@@ -69,12 +69,12 @@ export function CustomerList(props: CustomerListProps): JSX.Element {
         >
           Table View
         </button>
-        <button
+        {/* <button
           onClick={() => setViewMode("cards")}
           className={viewMode === "cards" ? "active" : ""}
         >
           Card View
-        </button>
+        </button> */}
       </div>
 
       {viewMode === "cards" && props.isLoading && (
